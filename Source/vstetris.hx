@@ -13,17 +13,64 @@ import flash.Lib;
 import nme.events.AccelerometerEvent;
 import nme.text.TextField;
 
+class Position
+{
+	public var x:Int;
+	public var y:Int;
+	public function new (_x:Int,_y:Int) {
+
+	}
+}
+
+
+class TetroState
+{
+	public var mBlocks:Array<Position>;
+	public function new () 
+	{
+		mBlocks = new Array<Position>();
+	}
+}
+
+class TetroType
+{
+	public var mStates:Array<TetroState>;
+	public function new () 
+	{
+		mStates = new Array<TetroState>();
+	}
+}
+
+class TetroList
+{
+	public var mTypes:Array<TetroType>;
+	public function new () 
+	{
+		mTypes = new Array<TetroType>();
+		mTypes[0] = new TetroType();
+		mTypes[0].mStates[0] = new TetroState();
+		mTypes[0].mStates[0].mBlocks[0] = new Position(0, 0);
+		mTypes[0].mStates[0].mBlocks[1] = new Position(0, 1);
+		mTypes[0].mStates[1] = new TetroState();
+		mTypes[0].mStates[1].mBlocks[0] = new Position(0, 0);
+		mTypes[0].mStates[1].mBlocks[1] = new Position(1, 0);
+		
+	}
+}
+
 
 class Tetroid
 {
 	public var mColor:Int;
 	public var mType:Int;
+	public var mState:Int;
 	public var mXPos:Int;
 	public var mYPos:Int;
 	
-	public function new () {
-		
 	
+	public function new () {
+		mType = 0;
+		mState = 0;
 	}
 }
 
@@ -33,11 +80,13 @@ class VsTetris extends Sprite {
 	private static var StageHeight:Int = 480;
 	
 	private static var GRID_SIZE_X:Int = 10;
-	private static var GRID_SIZE_Y:Int = 50;
+	private static var GRID_SIZE_Y:Int = 30;
 	
 
 	private var square:Sprite;
 	private var tetroid:Tetroid;
+	
+	private var tetroList:TetroList;
 	
 	private var Result:TextField;
 	
@@ -99,6 +148,8 @@ class VsTetris extends Sprite {
 		currentP1Tetroid = new Tetroid();
 		currentP1Tetroid.mXPos = 5;
 		currentP1Tetroid.mYPos = 5;
+		
+		tetroList = new TetroList();
 	}
 
 	private function initGrid()
@@ -191,34 +242,82 @@ class VsTetris extends Sprite {
 		
 	}
 
+	private function removeFromGrid(tetroid:Tetroid) :Void
+	{
+		addToGrid(tetroid, 0);
+	}
+	
+	private function addToGrid(tetroid:Tetroid, asType:Int) :Void
+	{
+		var type : TetroType = tetroList.mTypes[tetroid.mType];
+		var state : TetroState  = type.mStates[tetroid.mState];
+		var pos:Position;
+		for ( pos in state.mBlocks)
+		{
+			grid[tetroid.mXPos + pos.x][tetroid.mYPos + pos.y] = asType;
+		}
+	}
+	
+	private function canMove(xDir:Int, yDir:Int, tetroid:Tetroid) : Bool
+	{
+		var type : TetroType = tetroList.mTypes[tetroid.mType];
+		var state : TetroState  = type.mStates[tetroid.mState];
+		var pos:Position;
+		for ( pos in state.mBlocks)
+		{
+			var posX: Int = tetroid.mXPos + pos.x + xDir;
+			
+			var posY: Int = tetroid.mYPos + pos.y + yDir;
+			if (posY > GRID_SIZE_Y)
+				return false;
+			if (grid[posX][posY] != 0)
+				return false;
+		}
+		return true;
+	}
+	
 
 	private function updateGrid() :Void
 	{
-		var canMove:Bool = currentP1Tetroid.mYPos < GRID_SIZE_Y && grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos + 1] == 0;
 		
+		removeFromGrid(currentP1Tetroid);
 		
-		
-		if (canMove)
+		if (canMove(0, 1, currentP1Tetroid))
 		{
-		
-			// 1 - Remove current
-			grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = 0;
-			
-			// 2 - Move current
 			currentP1Tetroid.mYPos += 1;
-			
-			// 3- update grid
-			grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = 1;
+			addToGrid(currentP1Tetroid, 1);
 		}else {
-			// 1 - Commit to static
-			grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = BT_STATIC_BLOCK;
-			
-			// 2 -Add a new one
-			currentP1Tetroid.mYPos = 0;
-			
-			// 3- update grid
-			grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = 1;
+			addToGrid(currentP1Tetroid, BT_STATIC_BLOCK);
 		}
+		
+		//
+		//
+		//
+		//var canMove:Bool = currentP1Tetroid.mYPos < GRID_SIZE_Y && grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos + 1] == 0;
+		//
+		//
+		//
+		//if (canMove)
+		//{
+		//
+			// 1 - Remove current
+			//grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = 0;
+			//
+			// 2 - Move current
+			//currentP1Tetroid.mYPos += 1;
+			//
+			// 3- update grid
+			//grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = 1;
+		//}else {
+			// 1 - Commit to static
+			//grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = BT_STATIC_BLOCK;
+			//
+			// 2 -Add a new one
+			//currentP1Tetroid.mYPos = 0;
+			//
+			// 3- update grid
+			//grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = 1;
+		//}
 	
 	}
 	
