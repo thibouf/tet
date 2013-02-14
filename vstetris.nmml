@@ -11,6 +11,9 @@
   <haxelib name="nme" />
   <haxelib name="actuate" />
   <haxelib name="box2d" />
+  <haxelib name="flashconnect"/>
+  
+	<haxedef name="fdb" if="target_flash"/>
   
   <assets path="Assets" rename="assets" include="*" />
 

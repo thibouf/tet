@@ -9,7 +9,10 @@ import flash.display.StageScaleMode;
 import flash.events.Event;
 import flash.events.TouchEvent;
 import flash.events.MouseEvent;
+import flash.events.KeyboardEvent;
+
 import flash.Lib;
+import nme.system.System;
 import nme.events.AccelerometerEvent;
 import nme.text.TextField;
 
@@ -18,7 +21,8 @@ class Position
 	public var x:Int;
 	public var y:Int;
 	public function new (_x:Int,_y:Int) {
-
+		x = _x;
+		y = _y;
 	}
 }
 
@@ -51,9 +55,11 @@ class TetroList
 		mTypes[0].mStates[0] = new TetroState();
 		mTypes[0].mStates[0].mBlocks[0] = new Position(0, 0);
 		mTypes[0].mStates[0].mBlocks[1] = new Position(0, 1);
+		mTypes[0].mStates[0].mBlocks[2] = new Position(1, 1);
 		mTypes[0].mStates[1] = new TetroState();
 		mTypes[0].mStates[1].mBlocks[0] = new Position(0, 0);
 		mTypes[0].mStates[1].mBlocks[1] = new Position(1, 0);
+		mTypes[0].mStates[1].mBlocks[2] = new Position(1, 1);
 		
 	}
 }
@@ -80,7 +86,7 @@ class VsTetris extends Sprite {
 	private static var StageHeight:Int = 480;
 	
 	private static var GRID_SIZE_X:Int = 10;
-	private static var GRID_SIZE_Y:Int = 30;
+	private static var GRID_SIZE_Y:Int = 40;
 	
 
 	private var square:Sprite;
@@ -94,6 +100,7 @@ class VsTetris extends Sprite {
 	private static var BT_STATIC_BLOCK:Int = -1;
 	
 	private var currentP1Tetroid:Tetroid;
+	private var currentP2Tetroid:Tetroid;
 	
 	private var grid:Array<Array<Int>>;
 	
@@ -142,12 +149,20 @@ class VsTetris extends Sprite {
 		Lib.current.stage.addEventListener(MouseEvent.MOUSE_UP, on_MouseUp);
 		Lib.current.stage.addEventListener(MouseEvent.MOUSE_MOVE, on_MouseMove);
 		
+		Lib.current.stage.addEventListener(KeyboardEvent.KEY_DOWN, on_key);
+		
 		initGrid();
 		
 		
 		currentP1Tetroid = new Tetroid();
-		currentP1Tetroid.mXPos = 5;
-		currentP1Tetroid.mYPos = 5;
+		currentP1Tetroid.mXPos = 0;
+		currentP1Tetroid.mYPos = 0;
+		
+		
+		currentP2Tetroid = new Tetroid();
+		currentP2Tetroid.mXPos = 0;
+		currentP2Tetroid.mYPos = 35;
+
 		
 		tetroList = new TetroList();
 	}
@@ -215,6 +230,40 @@ class VsTetris extends Sprite {
 		//
 	}
 	
+	private function on_key(event:KeyboardEvent) : Void
+	{
+		trace(event.keyCode);
+		
+		if (event.keyCode == 32) //space
+		{
+			//rotate
+			var previousState : Int = currentP1Tetroid.mState;
+			
+			removeFromGrid(currentP1Tetroid);
+			currentP1Tetroid.mState = ( currentP1Tetroid.mState + 1 )% 2;
+			
+			if (!canMove(0, 0, currentP1Tetroid))
+			{
+				currentP1Tetroid.mState = previousState;
+			}
+			
+			addToGrid(currentP1Tetroid, 1);
+		}else if (event.keyCode == 39)
+		{ //right
+			
+			tryMove(1, 0, currentP1Tetroid);
+		}
+		else if (event.keyCode == 37)
+		{ //left
+			tryMove(-1, 0, currentP1Tetroid);
+		}
+		else if (event.keyCode == 40)
+		{ //left
+			tryMove(0, 1, currentP1Tetroid);
+		}
+	}
+	
+	
 	
 	// Event Handlers
 	
@@ -252,11 +301,27 @@ class VsTetris extends Sprite {
 		var type : TetroType = tetroList.mTypes[tetroid.mType];
 		var state : TetroState  = type.mStates[tetroid.mState];
 		var pos:Position;
-		for ( pos in state.mBlocks)
+		for (pos in state.mBlocks)
 		{
 			grid[tetroid.mXPos + pos.x][tetroid.mYPos + pos.y] = asType;
 		}
 	}
+	
+	private function tryMove(xDir:Int, yDir:Int, tetroid:Tetroid) : Bool
+	{
+			
+		removeFromGrid(tetroid);
+		var moved = canMove(xDir, yDir, tetroid);
+		if (moved)
+		{
+			tetroid.mXPos += xDir;
+			tetroid.mYPos += yDir;
+		}
+		addToGrid(tetroid, 1);
+		
+		return moved;
+	}
+	
 	
 	private function canMove(xDir:Int, yDir:Int, tetroid:Tetroid) : Bool
 	{
@@ -268,7 +333,7 @@ class VsTetris extends Sprite {
 			var posX: Int = tetroid.mXPos + pos.x + xDir;
 			
 			var posY: Int = tetroid.mYPos + pos.y + yDir;
-			if (posY > GRID_SIZE_Y)
+			if (posY >= GRID_SIZE_Y || posY < 0 || posX >= GRID_SIZE_X || posX < 0)
 				return false;
 			if (grid[posX][posY] != 0)
 				return false;
@@ -280,45 +345,20 @@ class VsTetris extends Sprite {
 	private function updateGrid() :Void
 	{
 		
-		removeFromGrid(currentP1Tetroid);
-		
-		if (canMove(0, 1, currentP1Tetroid))
+		if (!tryMove(0, 1, currentP1Tetroid))
 		{
-			currentP1Tetroid.mYPos += 1;
-			addToGrid(currentP1Tetroid, 1);
-		}else {
 			addToGrid(currentP1Tetroid, BT_STATIC_BLOCK);
+			currentP1Tetroid.mXPos = 0;
+			currentP1Tetroid.mYPos = 0;
 		}
 		
-		//
-		//
-		//
-		//var canMove:Bool = currentP1Tetroid.mYPos < GRID_SIZE_Y && grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos + 1] == 0;
-		//
-		//
-		//
-		//if (canMove)
-		//{
-		//
-			// 1 - Remove current
-			//grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = 0;
-			//
-			// 2 - Move current
-			//currentP1Tetroid.mYPos += 1;
-			//
-			// 3- update grid
-			//grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = 1;
-		//}else {
-			// 1 - Commit to static
-			//grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = BT_STATIC_BLOCK;
-			//
-			// 2 -Add a new one
-			//currentP1Tetroid.mYPos = 0;
-			//
-			// 3- update grid
-			//grid[currentP1Tetroid.mXPos][currentP1Tetroid.mYPos] = 1;
-		//}
-	
+		if (!tryMove(0, -1, currentP2Tetroid))
+		{
+			addToGrid(currentP2Tetroid, BT_STATIC_BLOCK);
+			currentP2Tetroid.mXPos = 0;
+			currentP2Tetroid.mYPos = 35;
+		}
+
 	}
 	
 	private var prevFrameTime:Int = 0;

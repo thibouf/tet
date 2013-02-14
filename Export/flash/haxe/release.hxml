@@ -5,6 +5,8 @@
 -lib nme
 -lib actuate
 -lib box2d
+-lib flashconnect
+-D fdb
 -D web
 -swf-version 10.1
 -swf9 Export/flash/bin/vstetris.swf
